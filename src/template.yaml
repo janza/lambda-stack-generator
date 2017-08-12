@@ -1,0 +1,182 @@
+Parameters:
+  StackName:
+    Type: String
+    Default: {{name}}
+
+Resources:
+  ArtifactStoreBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      VersioningConfiguration:
+        Status: Enabled
+
+  CloudFormationPipeline:
+    Type: "AWS::CodePipeline::Pipeline"
+    Properties:
+      RoleArn:
+        Fn::GetAtt: [CodePipelineServiceRole, Arn]
+      ArtifactStore:
+        Type: S3
+        Location:
+          Ref: ArtifactStoreBucket
+      DisableInboundStageTransitions: []
+      Stages:
+        - Name: Source
+          Actions:
+            - Name: SourceAction
+              ActionTypeId:
+                Category: Source
+                Owner: AWS
+                Version: 1
+                Provider: S3
+              OutputArtifacts:
+                - Name: TemplateSource
+              Configuration:
+                S3Bucket:
+                  Ref: ArtifactStoreBucket
+                S3ObjectKey: "_codepipeline/stack.zip"
+              RunOrder: 1
+        - Name: Release
+          Actions:
+            - Name: LambdaBuild
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: 1
+                Provider: CodeBuild
+              InputArtifacts:
+                - Name: TemplateSource
+              OutputArtifacts:
+                - Name: LambdaPackageOutput
+              Configuration:
+                ProjectName:
+                  Ref: LambdaBuild
+              RunOrder: 1
+
+            - Name: CreateChangeSet
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Provider: CloudFormation
+                Version: 1
+              InputArtifacts:
+                - Name: LambdaPackageOutput
+              Configuration:
+                ActionMode: CHANGE_SET_REPLACE
+                RoleArn:
+                  Fn::GetAtt: [CFNRole, Arn]
+                StackName:
+                  Fn::Sub: "${StackName}"
+                ChangeSetName:
+                  Fn::Sub: "${StackName}-ChangeSet"
+                TemplatePath:
+                  Fn::Sub: "LambdaPackageOutput::processed_cloudformation.yaml"
+                Capabilities: CAPABILITY_NAMED_IAM
+              RunOrder: 2
+
+            - Name: ExecuteChangeSet
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Provider: CloudFormation
+                Version: 1
+              Configuration:
+                ActionMode: CHANGE_SET_EXECUTE
+                ChangeSetName:
+                  Fn::Sub: "${StackName}-ChangeSet"
+                RoleArn:
+                  Fn::GetAtt: [CFNRole, Arn]
+                StackName:
+                  Fn::Sub: "${StackName}"
+                Capabilities: CAPABILITY_NAMED_IAM
+              RunOrder: 4
+
+  LambdaBuild:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: {{{buildImage}}}
+        Type: LINUX_CONTAINER
+      Name:
+        Fn::Sub: ${AWS::StackName}DeployLambdaBuild
+      ServiceRole:
+        Ref: CodeBuildRole
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec:
+          Fn::Sub: |
+            version: 0.2
+            phases:
+              build:
+                commands:
+                  - "for lambda in ./lambda/*; do (cd $lambda; [[ -f requirements.txt ]] && pip install -r requirements.txt || [[ -f package.json ]] && npm install); done"
+                  - "aws cloudformation package --template-file cloudformation.yaml --s3-bucket ${ArtifactStoreBucket} --output-template-file processed_cloudformation.yaml"
+            artifacts:
+              type: zip
+              files:
+                - processed_cloudformation.yaml
+
+  CFNRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: ['sts:AssumeRole']
+            Effect: Allow
+            Principal:
+              Service: [cloudformation.amazonaws.com]
+        Version: '2012-10-17'
+      Path: /
+      ManagedPolicyArns:
+        # TODO: restrict this
+        - arn:aws:iam::aws:policy/AdministratorAccess
+
+  CodeBuildRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: ['sts:AssumeRole']
+            Effect: Allow
+            Principal:
+              Service: [codebuild.amazonaws.com]
+        Version: '2012-10-17'
+      Path: /
+      ManagedPolicyArns:
+        # TODO: restrict this
+        - arn:aws:iam::aws:policy/AdministratorAccess
+
+  CodePipelineServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: ['sts:AssumeRole']
+            Effect: Allow
+            Principal:
+              Service: [codepipeline.amazonaws.com]
+        Version: '2012-10-17'
+      Path: /
+      Policies:
+        - PolicyName: CodePipelineAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Action:
+                  - 's3:*'
+                  - 'cloudformation:CreateStack'
+                  - 'cloudformation:DescribeStacks'
+                  - 'cloudformation:DeleteStack'
+                  - 'cloudformation:UpdateStack'
+                  - 'cloudformation:CreateChangeSet'
+                  - 'cloudformation:ExecuteChangeSet'
+                  - 'cloudformation:DeleteChangeSet'
+                  - 'cloudformation:DescribeChangeSet'
+                  - 'cloudformation:SetStackPolicy'
+                  - 'iam:PassRole'
+                  - 'codebuild:*'
+                Effect: Allow
+                Resource: '*'
