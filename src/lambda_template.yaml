@@ -10,7 +10,7 @@ Resources:
   LambdaRole:
     Type: "AWS::IAM::Role"
     Properties:
-      RoleName: LambdaResolvingCollisionsWithSSIRole
+      RoleName: LambdaRole
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -21,7 +21,7 @@ Resources:
             Action: "sts:AssumeRole"
       Path: "/"
       Policies:
-        - PolicyName: LoggingForLambdaResolvingCollisionsWithSSI
+        - PolicyName: LoggingForLambdaRole
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
