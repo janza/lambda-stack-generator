@@ -1,8 +1,6 @@
 import React, { Component } from 'react'
 import mustache from 'mustache'
 import CopyToClipboard from 'react-copy-to-clipboard'
-import templateUrl from './template.yaml'
-import lambdaTemplateUrl from './lambda_template.yaml'
 import Highlighter from 'react-syntax-highlighter'
 import 'antd/dist/antd.css'
 import {
@@ -17,6 +15,9 @@ import {
   Slider,
   Tabs
 } from 'antd'
+
+import templateUrl from './template.yaml'
+import lambdaTemplateUrl from './lambda_template.yaml'
 
 const { Header, Content, Footer } = Layout
 const { TabPane } = Tabs
@@ -149,15 +150,6 @@ class Editor extends Component {
                   }
                 ]
               }
-              // ,
-              // {
-              //   value: 'java8',
-              //   label: 'Java 8'
-              // },
-              // {
-              //   value: 'dotnetcore1.0',
-              //   label: '.NET Core 1.0'
-              // }
             ]}
           />
         )
