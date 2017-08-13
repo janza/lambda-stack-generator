@@ -3,23 +3,20 @@ import mustache from 'mustache'
 import CopyToClipboard from 'react-copy-to-clipboard'
 import Highlighter from 'react-syntax-highlighter'
 import 'antd/dist/antd.css'
-import {
-  Layout,
-  Menu,
-  Breadcrumb,
-  Row,
-  Col,
-  Input,
-  Form,
-  Cascader,
-  Slider,
-  Tabs
-} from 'antd'
+import Button from 'antd/lib/button'
+import Layout from 'antd/lib/layout'
+import Row from 'antd/lib/row'
+import Col from 'antd/lib/col'
+import Input from 'antd/lib/input'
+import Form from 'antd/lib/form'
+import Cascader from 'antd/lib/cascader'
+import Slider from 'antd/lib/slider'
+import Tabs from 'antd/lib/tabs'
 
 import templateUrl from './template.yaml'
 import lambdaTemplateUrl from './lambda_template.yaml'
 
-const { Header, Content, Footer } = Layout
+const { Content } = Layout
 const { TabPane } = Tabs
 
 class Template extends Component {
@@ -48,6 +45,9 @@ class Template extends Component {
   render () {
     if (!this.state.template) return null
     const renderedTemplate = mustache.render(this.state.template, this.props)
+
+    console.log(`rendering ${renderedTemplate.substr(0, 100)}`)
+
     return (
       <div style={{ position: 'relative' }}>
         <CopyToClipboard
@@ -58,7 +58,7 @@ class Template extends Component {
           }}
           text={renderedTemplate}
         >
-          <button>Copy to clipboard</button>
+          <Button>Copy to clipboard</Button>
         </CopyToClipboard>
         <Highlighter language='yaml'>
           {renderedTemplate}
@@ -91,7 +91,10 @@ class PipelineTemplate extends Component {
   }
 }
 
-const LambdaTemplate = props => <Template url={lambdaTemplateUrl} {...props} />
+const LambdaTemplate = props => {
+  console.log(props)
+  return <Template url={lambdaTemplateUrl} {...props} />
+}
 
 class Editor extends Component {
   render () {
@@ -220,29 +223,11 @@ class App extends Component {
   render () {
     return (
       <Layout className='layout'>
-        <Header>
-          <div className='logo' />
-          <Menu
-            theme='dark'
-            mode='horizontal'
-            defaultSelectedKeys={['1']}
-            style={{ lineHeight: '64px' }}
-          >
-            <Menu.Item key='1'>App</Menu.Item>
-          </Menu>
-        </Header>
         <Content style={{ padding: '0 50px' }}>
-          <Breadcrumb style={{ margin: '12px 0' }}>
-            <Breadcrumb.Item>Setup</Breadcrumb.Item>
-            <Breadcrumb.Item>Get the template</Breadcrumb.Item>
-          </Breadcrumb>
           <div style={{ background: '#fff', padding: 24, minHeight: 280 }}>
             <FormEditor />
           </div>
         </Content>
-        <Footer style={{ textAlign: 'center' }}>
-          Author: <a href='https://github.com/janza/'>janza</a>
-        </Footer>
       </Layout>
     )
   }
