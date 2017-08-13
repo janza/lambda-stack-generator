@@ -49,11 +49,14 @@ class Template extends Component {
     const renderedTemplate = mustache.render(this.state.template, this.props)
     return (
       <div style={{ position: 'relative' }}>
-        <CopyToClipboard style={{
-          position: 'absolute',
-          top: '10px',
-          right: '10px'
-        }} text={renderedTemplate}>
+        <CopyToClipboard
+          style={{
+            position: 'absolute',
+            top: '10px',
+            right: '10px'
+          }}
+          text={renderedTemplate}
+        >
           <button>Copy to clipboard</button>
         </CopyToClipboard>
         <Highlighter language='yaml'>
@@ -87,16 +90,7 @@ class PipelineTemplate extends Component {
   }
 }
 
-class LambdaTemplate extends Component {
-  render () {
-    return (
-      <Template
-        url={lambdaTemplateUrl}
-        {...this.props}
-      />
-    )
-  }
-}
+const LambdaTemplate = props => <Template url={lambdaTemplateUrl} {...props} />
 
 class Editor extends Component {
   render () {
@@ -112,115 +106,113 @@ class Editor extends Component {
       }
     }
 
+    const formItems = [
+      {
+        label: 'Name',
+        id: 'name',
+        required: true,
+        message: 'Provide a name for the service',
+        element: <Input />
+      },
+      {
+        label: 'Runtime',
+        id: 'runtime',
+        initialValue: ['nodejs', '6.10'],
+        element: (
+          <Cascader
+            options={[
+              {
+                value: 'nodejs',
+                label: 'Node',
+                children: [
+                  {
+                    value: '6.10',
+                    label: 'v6.10'
+                  },
+                  {
+                    value: '4.3',
+                    label: 'v4.3'
+                  }
+                ]
+              },
+              {
+                value: 'python',
+                label: 'Python',
+                children: [
+                  {
+                    value: '2.7',
+                    label: 'v2.7'
+                  },
+                  {
+                    value: '3.6',
+                    label: 'v3.6'
+                  }
+                ]
+              }
+              // ,
+              // {
+              //   value: 'java8',
+              //   label: 'Java 8'
+              // },
+              // {
+              //   value: 'dotnetcore1.0',
+              //   label: '.NET Core 1.0'
+              // }
+            ]}
+          />
+        )
+      },
+      {
+        label: 'Timeout',
+        id: 'timeout',
+        message: 'Provide a timeout',
+        initialValue: 3,
+        element: <Slider min={1} max={300} />
+      },
+      {
+        label: 'Memory size',
+        id: 'memorySize',
+        message: 'Provide memory size',
+        initialValue: 128,
+        element: <Slider min={128} max={1536} step={64} />
+      }
+    ].map(({ id, label, required, message, element, initialValue }, index) =>
+      <Form.Item key={index} {...formItemLayout} label={label} hasFeedback>
+        {getFieldDecorator(id, {
+          initialValue,
+          rules: [
+            {
+              required,
+              message
+            }
+          ]
+        })(element)}
+      </Form.Item>
+    )
+
+    const values = this.props.form.getFieldsValue()
+
     return (
       <Row>
         <Col span={12}>
           <Form onSubmit={this.handleSubmit}>
-            {[
-              {
-                label: 'Name',
-                id: 'name',
-                required: true,
-                message: 'Provide a name for the service',
-                element: <Input />
-              },
-              {
-                label: 'Runtime',
-                id: 'runtime',
-                initialValue: ['nodejs', '6.10'],
-                element: (
-                  <Cascader
-                    options={[
-                      {
-                        value: 'nodejs',
-                        label: 'Node',
-                        children: [
-                          {
-                            value: '6.10',
-                            label: 'v6.10'
-                          },
-                          {
-                            value: '4.3',
-                            label: 'v4.3'
-                          }
-                        ]
-                      },
-                      {
-                        value: 'python',
-                        label: 'Python',
-                        children: [
-                          {
-                            value: '2.7',
-                            label: 'v2.7'
-                          },
-                          {
-                            value: '3.6',
-                            label: 'v3.6'
-                          }
-                        ]
-                      }
-                      // ,
-                      // {
-                      //   value: 'java8',
-                      //   label: 'Java 8'
-                      // },
-                      // {
-                      //   value: 'dotnetcore1.0',
-                      //   label: '.NET Core 1.0'
-                      // }
-                    ]}
-                  />
-                )
-              },
-              {
-                label: 'Timeout',
-                id: 'timeout',
-                message: 'Provide a timeout',
-                initialValue: 3,
-                element: <Slider min={1} max={300} />
-              },
-              {
-                label: 'Memory size',
-                id: 'memorySize',
-                message: 'Provide memory size',
-                initialValue: 128,
-                element: <Slider min={128} max={1536} step={64} />
-              }
-            ].map(
-              ({ id, label, required, message, element, initialValue }, index) =>
-                <Form.Item
-                  key={index}
-                  {...formItemLayout}
-                  label={label}
-                  hasFeedback
-                >
-                  {getFieldDecorator(id, {
-                    initialValue,
-                    rules: [
-                      {
-                        required,
-                        message
-                      }
-                    ]
-                  })(element)}
-                </Form.Item>
-            )}
+            {formItems}
           </Form>
         </Col>
         <Col span={12}>
           <Tabs defaultActiveKey='1'>
             <TabPane tab='Lambda Template' key='1'>
               <LambdaTemplate
-                name={this.props.form.getFieldValue('name')}
-                runtime={this.props.form.getFieldValue('runtime').join('')}
-                timeout={this.props.form.getFieldValue('timeout')}
-                memorySize={this.props.form.getFieldValue('memorySize')}
+                name={values.name}
+                runtime={values.runtime.join('')}
+                timeout={values.timeout}
+                memorySize={values.memorySize}
               />
             </TabPane>
             <TabPane tab='CodePipeline Template' key='2'>
               <PipelineTemplate
-                name={this.props.form.getFieldValue('name')}
-                runtime={this.props.form.getFieldValue('runtime').join('')}
+                name={values.name}
+                runtime={values.runtime.join('')}
               />
             </TabPane>
           </Tabs>
