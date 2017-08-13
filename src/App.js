@@ -1,11 +1,9 @@
 import React, { Component } from 'react'
-// import yaml from 'js-yaml'
 import mustache from 'mustache'
 import CopyToClipboard from 'react-copy-to-clipboard'
 import templateUrl from './template.yaml'
 import lambdaTemplateUrl from './lambda_template.yaml'
 import Highlighter from 'react-syntax-highlighter'
-// import assign from 'deep-assign'
 import 'antd/dist/antd.css'
 import {
   Layout,
@@ -19,6 +17,7 @@ import {
   Slider,
   Tabs
 } from 'antd'
+
 const { Header, Content, Footer } = Layout
 const { TabPane } = Tabs
 
